@@ -162,7 +162,10 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 #busy b{font-size:20px;letter-spacing:.04em}#busy small{font-size:13px;opacity:.8;max-width:280px;line-height:1.4}
 @keyframes spin{to{transform:rotate(360deg)}}
 #dropbox.bad{outline:2px solid #e5484d;outline-offset:2px}
+#rcimg{display:block;width:100%;max-width:520px;margin:14px auto;border:1px solid var(--line);box-shadow:0 6px 22px rgba(0,0,0,.35);background:#fff}
+#ok .btn{width:100%;max-width:520px;display:block;margin:0 auto}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <header><div class="wrap"><nav><a href="#sizes">Size guide</a><a href="#shop">Shop</a><a href="#order">Order</a><a href="#pay">Payment</a><a href="#details">Order Details</a><a href="#inquiries">Inquiries</a></nav></div></header>
@@ -193,7 +196,7 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 
 <section id="shop"><div class="wrap">
 <h2>The Collection</h2>
-<p class="sub">Choose a design and color and the picture changes. In Edit mode, tap a small box under each product to upload the image for that option.</p>
+<p class="sub">Select your preferred design and color from any merchandise category below, then add the item to your cart to include it in your order.</p>
 <div class="grid" id="products"></div>
 </div></section>
 
@@ -209,7 +212,7 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 
 <section id="pay"><div class="wrap">
 <h2>Payment</h2>
-<p class="sub">Scan to pay the total shown above, then send your proof of payment. Tap a QR box to upload your QR code.</p>
+<p class="sub">Scan the QR code or use the bank details provided to pay the total amount shown above.</p>
 <div class="pay" id="banks"></div>
 </div></section>
 
@@ -219,15 +222,15 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 <form class="panel form" id="form" novalidate style="max-width:640px">
 <div class="row"><div><label>First name <span class="req">*</span></label><input name="first" required autocomplete="given-name" autocapitalize="characters" placeholder="JUAN"></div><div><label>Last name <span class="req">*</span></label><input name="last" required autocomplete="family-name" autocapitalize="characters" placeholder="DELA CRUZ"></div></div>
 <div><label>Contact no. (Mobile / Viber) <span class="req">*</span></label><input name="contact" type="tel" required inputmode="numeric" maxlength="11" autocomplete="tel-national" placeholder="09XXYYYZZZZ"></div>
-<div><label>Email <span class="req">*</span></label><input name="email" type="email" required autocomplete="email" placeholder="name@example.com"></div>
-<div><label>Delivery address <span class="req">*</span></label><textarea name="address" rows="3" required placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, ZIP Code"></textarea><div class="note" style="margin-top:6px">Shipping fees are shouldered by the buyer and settled upon delivery. We will contact you directly to confirm your delivery details and preferred schedule.</div></div>
+<div><label>Email</label><input name="email" type="email" autocomplete="email" placeholder="name@example.com"></div>
+<div><label>Delivery address <span class="req">*</span></label><textarea name="address" rows="3" required placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, ZIP Code"></textarea><div class="note" style="margin-top:6px">Shipping Fee (SF) is shouldered by the buyer and settled upon delivery. We will contact you directly to confirm your shipping details and preferred schedule prior to delivery.</div></div>
 <div><label>Facebook name / link</label><input name="fb"></div>
 <div><label>Proof of payment <span class="req">*</span></label><label class="drop" id="dropbox"><input type="file" id="rcpt" accept="image/*" hidden><span id="dropt">+ Upload or insert a screenshot / photo of your payment receipt</span></label><div class="note">Please pay the total shown above using the QR codes, then upload your receipt here.</div></div>
 <div class="polite">Thank you for ordering! Your order will be confirmed as soon as possible once we have reviewed your payment. We appreciate your patience.</div>
 <button class="btn" type="submit">Submit order</button>
 <div class="note" id="err" style="color:var(--maroon)"></div>
 </form>
-<div class="ok" id="ok"><h3>Order recorded</h3><p id="okmsg"></p><textarea id="sum" rows="9" readonly></textarea><p><button class="btn alt" id="copy" type="button">Copy summary</button></p></div>
+<div class="ok" id="ok"><h3 id="okh">Order recorded</h3><p id="okmsg"></p><img id="rcimg" alt="Pending receipt preview"><p><button class="btn" id="dlpdf" type="button">Download pending receipt (PDF)</button></p></div>
 <div class="panel privacy" id="privacy" style="max-width:640px;margin-top:22px"><h3>Privacy Policy</h3>
 <p>We value your privacy and are committed to protecting the personal information you share with us. Any information collected, including your name, contact details, delivery address, order specifications, and payment details, will be used exclusively for order processing, customization, production, delivery, and customer service. Such information will not be used for unrelated purposes or disclosed to unauthorized parties.</p>
 <p>For concerns or requests regarding access, correction, or deletion of your personal information, you may contact Alexander Sy 2025M via Viber at 09669929296.</p></div>
@@ -329,7 +332,7 @@ const rules={
  first:{fix:v=>v.toUpperCase(),ok:v=>NAME.test(v.trim()),msg:"Please enter your first name in CAPITAL LETTERS (letters only)."},
  last:{fix:v=>v.toUpperCase(),ok:v=>NAME.test(v.trim()),msg:"Please enter your last name in CAPITAL LETTERS (letters only)."},
  contact:{fix:v=>v.replace(/\D/g,"").slice(0,11),ok:v=>/^09\d{9}$/.test(v),msg:"Enter an 11-digit mobile number starting with 09 (example: 09XXYYYZZZZ)."},
- email:{fix:v=>v.trim(),ok:v=>/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v),msg:"Please enter a valid email address (example: name@example.com)."}};
+ email:{fix:v=>v.trim(),ok:v=>v===""||/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v),msg:"Please enter a valid email address (example: name@example.com)."}};
 Object.entries(rules).forEach(([n,r])=>{const el=f.elements[n];if(!el)return;
  const m=document.createElement("div");m.className="vmsg";el.insertAdjacentElement("afterend",m);
  const run=t=>{const ok=r.ok(el.value);el.setCustomValidity(ok?"":r.msg);const show=t&&!ok;el.classList.toggle("bad",show);m.textContent=show?r.msg:""};
@@ -367,16 +370,81 @@ $("#form").addEventListener("submit",async e=>{
  if(!f.checkValidity()){stop();f.reportValidity();return}
  if(!RECEIPT){stop();$("#dropbox").classList.add("bad");err.textContent="Please upload your proof of payment before submitting your order.";$("#dropbox").scrollIntoView({behavior:"smooth",block:"center"});return}
  busy(true,"Sending your order…","Please wait while we record your order. Don’t close or refresh this page.");
- const d=Object.fromEntries(new FormData(f)),id="APB_"+String(d.last||"").toUpperCase().replace(/[^A-ZÑ]/g,"")+(1000+Math.floor(Math.random()*9000));
+ const d=Object.fromEntries(new FormData(f)),id="APB_"+(String(d.first||"").toUpperCase().replace(/[^A-ZÑ]/g,"")[0]||"")+String(d.last||"").toUpperCase().replace(/[^A-ZÑ]/g,"")+(1000+Math.floor(Math.random()*9000));
  const order={id,timestamp:new Date().toISOString(),buyer:d,items:cart,total:total(),receipt:RECEIPT,token:CONFIG.token};
- const lines=cart.map(i=>`- ${i.qty} x ${i.name} (${[i.design,i.color,i.size,i.custom].filter(Boolean).join(", ")}) = ${peso(i.price*i.qty)}`);
- const text=`Alphan Merch 2026 — ${id}\n${d.first} ${d.last}\n${d.contact} | ${d.email} | ${d.fb||"—"}\nDelivery address: ${d.address}\n\n${lines.join("\n")}\n\nTOTAL: ${peso(total())}\nProof of payment: ${RECEIPT?"attached":"not attached"}`;
  let sent=false;if(CONFIG.endpoint){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),30000);try{await fetch(CONFIG.endpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(order),signal:ac.signal});sent=true}catch(x){sent=false}clearTimeout(tm)}
- $("#okmsg").textContent=sent?`Thank you! Your order (reference ${id}) has been recorded. Please make sure you have paid ${peso(total())} and uploaded your receipt. We will confirm your order as soon as possible.`:`Your order summary is ready (reference ${id}), but it could not be sent online. Please copy it below and send it to Alexander Sy via Viber at 09669929296 together with your payment receipt.`;
- $("#sum").value=text;$("#ok").style.display="block";
+ $("#okh").textContent=sent?"Order recorded":"Order not yet sent";
+ $("#okmsg").textContent=sent?`Thank you! Your order (purchase code ${id}) has been recorded. Please download and keep your pending receipt below. We will confirm your order as soon as possible.`:`Your order (purchase code ${id}) could not be sent online. Please download your pending receipt below and send it to Alexander Sy via Viber at 09669929296 together with your proof of payment.`;
+ const cv=document.createElement("canvas"),now=new Date();
+ drawReceipt(cv,{code:id,contact:d.contact,email:d.email||"—",address:d.address,peso,subtotal:peso(total()),proof:!!RECEIPT,
+  date:now.toLocaleString("en-PH",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}),
+  items:cart.map(i=>({text:`${i.qty} x ${i.name} (${[i.design,i.color,i.size,i.custom].filter(Boolean).join(", ")})`,price:i.price,qty:i.qty}))});
+ RC_URL=cv.toDataURL("image/jpeg",.92);RC_NAME=id+"_pending_receipt.pdf";$("#rcimg").src=RC_URL;
+ $("#ok").style.display="block";
  if(sent){DONE=true;$("#form button[type=submit]").textContent="Order submitted ✓"}
  BUSY=false;busy(false);$("#ok").scrollIntoView({behavior:"smooth"})});
-$("#copy").onclick=()=>{$("#sum").select();try{navigator.clipboard.writeText($("#sum").value)}catch(x){document.execCommand("copy")}$("#copy").textContent="Copied ✓"};
+/*RC_START*/
+function drawReceipt(cv,data){
+ const FONT='"Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,sans-serif',W=1240,P=96,CW=W-2*P,MINH=1754;
+ const ctx=cv.getContext("2d");
+ const f=(w,s,it)=>`${it?"italic ":""}${w?"700":"400"} ${s}px ${FONT}`;
+ // rich text wrapper: segs=[{t,b}], returns the y after the last line; draws only when draw=true
+ const rich=(segs,x,y,maxW,size,lh,opt,draw)=>{
+  const it=!!(opt&&opt.i),col=(opt&&opt.c)||"#1d1418";
+  const words=[];segs.forEach(s=>String(s.t).split(/(\s+)/).forEach(w=>{if(w!=="")words.push({t:w,b:!!s.b})}));
+  let line=[],lw=0;const lines=[];
+  const wd=w=>{ctx.font=f(w.b,size,it);return ctx.measureText(w.t).width};
+  words.forEach(w=>{const ww=wd(w);if(/^\s+$/.test(w.t)){if(line.length)line.push({...w,ww,sp:1}),lw+=ww;return}
+   if(lw+ww>maxW&&line.length){while(line.length&&line[line.length-1].sp){lw-=line.pop().ww}lines.push(line);line=[];lw=0}
+   line.push({...w,ww});lw+=ww});
+  if(line.length){while(line.length&&line[line.length-1].sp){line.pop()}lines.push(line)}
+  if(draw){let yy=y;lines.forEach(L=>{let xx=x;L.forEach(w=>{ctx.font=f(w.b,size,it);ctx.fillStyle=col;ctx.fillText(w.t,xx,yy);xx+=w.ww});yy+=lh})}
+  return y+lines.length*lh};
+ const layout=draw=>{
+  let y=0;const T="top";ctx.textBaseline="alphabetic";
+  if(draw){ctx.fillStyle="#84112f";ctx.fillRect(0,0,W,210);
+   const g=ctx.createLinearGradient(0,206,W,206);g.addColorStop(0,"#2f8f4a");g.addColorStop(1,"#0f4f2a");ctx.fillStyle=g;ctx.fillRect(0,206,W,8);
+   ctx.fillStyle="#fff";ctx.font=f(1,64);ctx.fillText("ALPHAN MERCH 2026",P,112);
+   ctx.font=f(0,26);ctx.globalAlpha=.88;ctx.fillText("ALPHA PHI BETA · UNIVERSITY OF THE PHILIPPINES",P,162);ctx.globalAlpha=1}
+  y=330;
+  if(draw){ctx.fillStyle="#84112f";ctx.font=f(1,44);ctx.fillText("PENDING RECEIPT",P,y)}
+  y+=34;if(draw){ctx.fillStyle="#d8cfd3";ctx.fillRect(P,y,CW,3)}y+=74;
+  const row=(label,val,opt)=>{ // label + value on the same line, wrapped under the label start
+   const lb=!!(opt&&opt.lb),vb=!!(opt&&opt.vb);ctx.font=f(lb,34);const lw=ctx.measureText(label+" ").width;
+   if(draw){ctx.font=f(lb,34);ctx.fillStyle="#1d1418";ctx.fillText(label,P,y)}
+   const ny=rich([{t:val,b:vb}],P+lw,y,CW-lw,34,48,{},draw);y=Math.max(ny,y+48)+14};
+  row("Purchase code:",data.code,{lb:1,vb:1});
+  row("Contact:",data.contact);
+  row("Email:",data.email);
+  row("Address:",data.address);
+  // items
+  if(draw){ctx.font=f(0,34);ctx.fillStyle="#1d1418";ctx.fillText("Items:",P,y)}
+  ctx.font=f(0,34);const il=ctx.measureText("Items: ").width;
+  data.items.forEach((it,i)=>{
+   const amt=data.peso(it.price*it.qty);ctx.font=f(0,34);const aw=ctx.measureText(amt).width;
+   const ny=rich([{t:it.text}],P+il,y,CW-il-aw-24,34,48,{},draw);
+   if(draw){ctx.font=f(0,34);ctx.fillStyle="#1d1418";ctx.fillText(amt,P+CW-aw,y)}
+   y=Math.max(ny,y+48)+(i<data.items.length-1?10:0)});
+  y+=14;
+  row("Purchase subtotal:",data.subtotal);
+  if(draw){ctx.fillStyle="#d8cfd3";ctx.fillRect(P,y-12,CW,3)}y+=40;
+  if(draw){ctx.font=f(0,34);ctx.fillStyle="#1d1418";ctx.fillText(data.proof?"Proof of payment attached":"Proof of payment not attached",P,y)}y+=62;
+  if(draw){ctx.font=f(1,34);ctx.fillStyle="#84112f";ctx.fillText("Pending order confirmation",P,y)}y+=96;
+  // note (italic, with bold terms)
+  const nt=[{t:"Note: "},{t:"Shipping fees (SF)",b:1},{t:" are subject to standard courier rates originating from South Triangle, Quezon City. A separate "},{t:"SF",b:1},{t:" receipt will be sent to you prior to delivery."}];
+  if(draw){ctx.fillStyle="#f6f0f2";const h=rich(nt,P+28,y+8,CW-56,30,44,{i:1},false)-y+24;ctx.fillRect(P,y-34,CW,h);ctx.fillStyle="#84112f";ctx.fillRect(P,y-34,8,h)}
+  y=rich(nt,P+28,y+8,CW-56,30,44,{i:1,c:"#3a2c33"},draw)+54;
+  if(draw){ctx.font=f(0,24);ctx.fillStyle="#8a7d84";ctx.fillText("Issued "+data.date,P,y)}y+=40;
+  return y};
+ ctx.font=f(0,34);
+ const need=layout(false);const H=Math.max(MINH,need+60);cv.width=W;cv.height=H;
+ ctx.fillStyle="#ffffff";ctx.fillRect(0,0,W,H);layout(true);return H}
+/*RC_END*/
+
+let RC_URL="",RC_NAME="receipt.pdf";
+$("#dlpdf").onclick=()=>{if(!RC_URL)return;
+ try{const J=window.jspdf&&window.jspdf.jsPDF;if(!J)throw 0;const im=$("#rcimg"),hh=210*im.naturalHeight/im.naturalWidth,pdf=new J({unit:"mm",format:[210,Math.max(hh,297)]});pdf.addImage(RC_URL,"JPEG",0,0,210,hh);pdf.save(RC_NAME)}
+ catch(x){const a=document.createElement("a");a.href=RC_URL;a.download=RC_NAME.replace(/\.pdf$/,".jpg");document.body.appendChild(a);a.click();a.remove()}};
 render();
 </script>
 <div id="busy" role="alertdialog" aria-live="assertive" aria-label="Please wait"><div class="spin"></div><b id="busyt">Please wait…</b><small id="busys">Checking your order. Please don’t close or refresh this page.</small></div>
