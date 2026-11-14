@@ -182,6 +182,11 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 .cpy.done,.cpy.fail{background:#fff;color:#1b0f1a;text-shadow:none;border-color:#fff;animation:none}
 .cpy.done::after,.cpy.fail::after{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);background:#fff;color:#1b0f1a;font:700 11px Inter,sans-serif;letter-spacing:.03em;padding:4px 9px;border-radius:3px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:none}
 .cpy.done::after{content:"Copied ✓"}.cpy.fail::after{content:"Press and hold to copy"}
+.pfmsg{font-size:13px;margin-top:6px;color:var(--muted)}.pfmsg:empty{display:none}.pfmsg.bad{color:#ff6b6b}
+.pfact{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}.pfact[hidden]{display:none}
+.pfbtn{font:600 13px Inter,sans-serif;padding:8px 16px;border-radius:3px;cursor:pointer;background:transparent;color:var(--ink);border:1.5px solid var(--purple);transition:background .15s,border-color .15s,color .15s}
+.pfbtn:hover,.pfbtn:focus-visible{background:rgba(255,255,255,.14);border-color:#fff;color:#fff;outline:none}
+.pfbtn.rm{border-color:#c2475a;color:#ff9aa8}.pfbtn.rm:hover,.pfbtn.rm:focus-visible{background:rgba(230,70,90,.22);border-color:#ff6b7f;color:#fff}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -243,7 +248,7 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 <div><label>Email</label><input name="email" type="email" autocomplete="email" placeholder="name@example.com"></div>
 <div><label>Delivery address <span class="req">*</span></label><textarea name="address" rows="3" required placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, ZIP Code"></textarea><div class="note" style="margin-top:6px">Shipping Fee (SF) is shouldered by the buyer and settled upon delivery. We will contact you directly to confirm your shipping details and preferred schedule prior to delivery.</div></div>
 <div><label>Facebook name / link</label><input name="fb"></div>
-<div><label>Proof of payment <span class="req">*</span></label><label class="drop" id="dropbox"><input type="file" id="rcpt" accept="image/*" hidden><span id="dropt">+ Upload or insert a screenshot / photo of your payment receipt</span></label><div class="note">Please pay the total shown above using the QR codes, then upload your receipt here.</div></div>
+<div><label>Proof of payment <span class="req">*</span></label><label class="drop" id="dropbox"><input type="file" id="rcpt" accept="image/*" hidden><span id="dropt">+ Upload or insert a screenshot / photo of your payment receipt</span></label><div class="pfmsg" id="pfmsg" aria-live="polite"></div><div class="pfact" id="pfact" hidden><button type="button" class="pfbtn" id="pfchange">Change photo</button><button type="button" class="pfbtn rm" id="pfremove">Remove</button></div><div class="note">Please pay the total shown above using the QR codes, then upload your receipt here.</div></div>
 <div class="polite">Thank you for ordering! Your order will be confirmed as soon as possible once we have reviewed your payment. We appreciate your patience.</div>
 <button class="btn" type="submit">Submit order</button>
 <div class="note" id="err" style="color:var(--maroon)"></div>
@@ -379,11 +384,18 @@ document.querySelectorAll("#banks .cpy").forEach(el=>{const go=async()=>{const o
 document.querySelectorAll("#banks .img img").forEach(im=>im.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();im.click()}}));
 document.querySelectorAll("#banks .up").forEach(uploader);
 let RECEIPT="";
-$("#rcpt").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1400/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=im.width*k;cv.height=im.height*k;cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);RECEIPT=cv.toDataURL("image/jpeg",.8);$("#dropt").innerHTML=`<img alt="Payment receipt" src="${RECEIPT}">`};im.src=r.result};r.readAsDataURL(f)};
+const DROPDEF="+ Upload or insert a screenshot / photo of your payment receipt";
+const pfMsg=(t,bad)=>{const m=$("#pfmsg");m.textContent=t||"";m.classList.toggle("bad",!!bad)};
+const pfSync=()=>{$("#pfact").hidden=!RECEIPT};
+$("#rcpt").onchange=e=>{const f=e.target.files[0];if(!f)return;
+ const fail=()=>{pfMsg("We couldn’t read that file. Please choose a photo or screenshot and try again.",true)};
+ const r=new FileReader();r.onerror=fail;r.onload=()=>{const im=new Image();im.onerror=fail;im.onload=()=>{const k=Math.min(1,1400/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=im.width*k;cv.height=im.height*k;cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);RECEIPT=cv.toDataURL("image/jpeg",.8);$("#dropt").innerHTML=`<img alt="Payment receipt" src="${RECEIPT}">`;pfMsg("Photo added. Not the right one? Change or remove it below.");pfSync()};im.src=r.result};r.readAsDataURL(f)};
+$("#pfchange").onclick=()=>{$("#rcpt").value="";$("#rcpt").click()};
+$("#pfremove").onclick=()=>{RECEIPT="";$("#rcpt").value="";$("#dropt").textContent=DROPDEF;pfMsg("Photo removed. Please upload your proof of payment.");pfSync()};
 let BUSY=false,DONE=false;
 const busy=(on,t,s)=>{const o=$("#busy"),btn=$("#form button[type=submit]");o.classList.toggle("on",on);if(t)$("#busyt").textContent=t;if(s)$("#busys").textContent=s;btn.disabled=on||DONE;document.body.style.overflow=on?"hidden":"";$("#form").setAttribute("aria-busy",on)};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-$("#rcpt").addEventListener("change",()=>{$("#dropbox").classList.remove("bad")});
+$("#rcpt").addEventListener("change",()=>{$("#dropbox").classList.remove("bad");$("#err").textContent=""});
 $("#form").addEventListener("submit",async e=>{
  e.preventDefault();if(BUSY||DONE)return;BUSY=true;const f=e.target,err=$("#err");err.textContent="";
  busy(true,"Please wait…","Checking your order. Please don’t close or refresh this page.");await sleep(700);
@@ -393,17 +405,18 @@ $("#form").addEventListener("submit",async e=>{
  if(!RECEIPT){stop();$("#dropbox").classList.add("bad");err.textContent="Please upload your proof of payment before submitting your order.";$("#dropbox").scrollIntoView({behavior:"smooth",block:"center"});return}
  busy(true,"Sending your order…","Please wait while we record your order. Don’t close or refresh this page.");
  const d=Object.fromEntries(new FormData(f)),id="APB_"+(String(d.first||"").toUpperCase().replace(/[^A-ZÑ]/g,"")[0]||"")+String(d.last||"").toUpperCase().replace(/[^A-ZÑ]/g,"")+(1000+Math.floor(Math.random()*9000));
- const order={id,timestamp:new Date().toISOString(),buyer:d,items:cart,total:total(),receipt:RECEIPT,token:CONFIG.token};
+ const cv=document.createElement("canvas"),now=new Date();RC_URL="";
+ try{drawReceipt(cv,{code:id,contact:d.contact,email:d.email||"—",address:d.address,peso,subtotal:peso(total()),proof:!!RECEIPT,
+  date:now.toLocaleString("en-PH",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}),
+  items:cart.map(i=>({text:`${i.qty} x ${i.name} (${[i.design,i.color,i.size,i.custom].filter(Boolean).join(", ")})`,price:i.price,qty:i.qty}))});
+  RC_URL=cv.toDataURL("image/jpeg",.9)}catch(x){RC_URL=""}
+ RC_NAME=id+"_pending_receipt.pdf";$("#rcimg").src=RC_URL;
+ const order={id,timestamp:new Date().toISOString(),buyer:d,items:cart,total:total(),receipt:RECEIPT,receiptCopy:RC_URL,token:CONFIG.token};
  let sent=false;if(CONFIG.endpoint){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),30000);try{await fetch(CONFIG.endpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(order),signal:ac.signal});sent=true}catch(x){sent=false}clearTimeout(tm)}
  $("#okh").textContent=sent?"Order recorded":"Order not yet sent";
  $("#okmsg").textContent=sent?`Thank you! Your order (purchase code ${id}) has been recorded. Please download and keep your pending receipt below. We will confirm your order as soon as possible.`:`Your order (purchase code ${id}) could not be sent online. Please download your pending receipt below and send it to Alexander Sy via Viber at 09669929296 together with your proof of payment.`;
- const cv=document.createElement("canvas"),now=new Date();
- drawReceipt(cv,{code:id,contact:d.contact,email:d.email||"—",address:d.address,peso,subtotal:peso(total()),proof:!!RECEIPT,
-  date:now.toLocaleString("en-PH",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}),
-  items:cart.map(i=>({text:`${i.qty} x ${i.name} (${[i.design,i.color,i.size,i.custom].filter(Boolean).join(", ")})`,price:i.price,qty:i.qty}))});
- RC_URL=cv.toDataURL("image/jpeg",.92);RC_NAME=id+"_pending_receipt.pdf";$("#rcimg").src=RC_URL;
  $("#ok").style.display="block";
- if(sent){DONE=true;$("#form button[type=submit]").textContent="Order submitted ✓"}
+ if(sent){DONE=true;$("#form button[type=submit]").textContent="Order submitted ✓";$("#pfact").hidden=true}
  BUSY=false;busy(false);$("#ok").scrollIntoView({behavior:"smooth"})});
 /*RC_START*/
 function drawReceipt(cv,data){
