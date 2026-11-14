@@ -187,6 +187,9 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 .pfbtn{font:600 13px Inter,sans-serif;padding:8px 16px;border-radius:3px;cursor:pointer;background:transparent;color:var(--ink);border:1.5px solid var(--purple);transition:background .15s,border-color .15s,color .15s}
 .pfbtn:hover,.pfbtn:focus-visible{background:rgba(255,255,255,.14);border-color:#fff;color:#fff;outline:none}
 .pfbtn.rm{border-color:#c2475a;color:#ff9aa8}.pfbtn.rm:hover,.pfbtn.rm:focus-visible{background:rgba(230,70,90,.22);border-color:#ff6b7f;color:#fff}
+#ok h3{margin-bottom:12px}#okmsg p{margin:0 0 12px}#okmsg p:last-child{margin-bottom:0}
+.okeb{display:inline-block;font:800 20px Inter,sans-serif;letter-spacing:.2em;color:#fff;background:rgba(194,71,90,.4);border:2px solid #e0556b;border-radius:3px;padding:8px 18px;margin-bottom:12px}.okeb[hidden]{display:none}
+#ok.fail{border-color:#c2475a}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -253,7 +256,7 @@ footer{padding:32px 0;text-align:center;color:var(--muted);font-size:13px}
 <button class="btn" type="submit">Submit order</button>
 <div class="note" id="err" style="color:var(--maroon)"></div>
 </form>
-<div class="ok" id="ok"><h3 id="okh">Order recorded</h3><p id="okmsg"></p><img id="rcimg" alt="Pending receipt preview"><p><button class="btn" id="dlpdf" type="button">Download pending receipt (PDF)</button></p></div>
+<div class="ok" id="ok"><div class="okeb" id="okeb" hidden>ADVISORY</div><h3 id="okh">Order recorded</h3><div id="okmsg"></div><img id="rcimg" alt="Pending receipt preview"><p><button class="btn" id="dlpdf" type="button">Download pending receipt (PDF)</button></p></div>
 <div class="panel privacy" id="privacy" style="max-width:640px;margin-top:22px"><h3>Privacy Policy</h3>
 <p>We value your privacy and are committed to protecting the personal information you share with us. Any information collected, including your name, contact details, delivery address, order specifications, and payment details, will be used exclusively for order processing, customization, production, delivery, and customer service. Such information will not be used for unrelated purposes or disclosed to unauthorized parties.</p>
 <p>For concerns or requests regarding access, correction, or deletion of your personal information, you may contact Alexander Sy 2025M via Viber at 09669929296.</p></div>
@@ -413,8 +416,11 @@ $("#form").addEventListener("submit",async e=>{
  RC_NAME=id+"_pending_receipt.pdf";$("#rcimg").src=RC_URL;
  const order={id,timestamp:new Date().toISOString(),buyer:d,items:cart,total:total(),receipt:RECEIPT,receiptCopy:RC_URL,token:CONFIG.token};
  let sent=false;if(CONFIG.endpoint){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),30000);try{await fetch(CONFIG.endpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(order),signal:ac.signal});sent=true}catch(x){sent=false}clearTimeout(tm)}
- $("#okh").textContent=sent?"Order recorded":"Order not yet sent";
- $("#okmsg").textContent=sent?`Thank you! Your order (purchase code ${id}) has been recorded. Please download and keep your pending receipt below. We will confirm your order as soon as possible.`:`Your order (purchase code ${id}) could not be sent online. Please download your pending receipt below and send it to Alexander Sy via Viber at 09669929296 together with your proof of payment.`;
+ $("#okh").textContent=sent?"Order recorded":"Order submission failed";$("#okeb").hidden=sent;$("#ok").classList.toggle("fail",!sent);
+ $("#okmsg").innerHTML=sent?`<p>Thank you! Your order (purchase code <b>${id}</b>) has been recorded. Please download and keep your pending receipt below. We will confirm your order as soon as possible.${d.email?` A copy of your receipt will also be sent to <b>${String(d.email).replace(/[<>&"]/g,"")}</b>.`:""}</p>`
+ :`<p>We were unable to submit your order (purchase code <b>${id}</b>). This may be due to an unstable internet connection, a slow network response, or a temporary service interruption.</p>
+<p><b>Please download your pending receipt below and send it to Alexander Sy via Viber at <u>09669929296</u> or email at <u>atsm25202@gmail.com</u> together with your proof of payment.</b></p>
+<p>Your order matters to us. The APB Merch Project Team will track your order and contact you directly.</p>`;
  $("#ok").style.display="block";
  if(sent){DONE=true;$("#form button[type=submit]").textContent="Order submitted ✓";$("#pfact").hidden=true}
  BUSY=false;busy(false);$("#ok").scrollIntoView({behavior:"smooth"})});
